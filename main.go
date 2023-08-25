@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/isaacharrisholt/tinyproxy/proxy"
+	"github.com/isaacharrisholt/miniproxy/proxy"
 )
 
 func main() {
-	settings, err := proxy.NewSettings("tinyproxy.json")
+	settings, err := proxy.NewSettings("miniproxy.json")
 	if err != nil {
 		log.Fatal(err)
 	}

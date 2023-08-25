@@ -1,0 +1,24 @@
+{
+  "port": 3000,
+  "targets": {
+    "go": {
+      "port": 3001,
+      "service": {
+        "command": ["go", "run", "."],
+        "workDir": "./go"
+      }
+    },
+    "rust": {
+      "port": 3002,
+      "service": {
+        "command": ["cargo", "watch", "-s", "cargo run --bin local"],
+        "workDir": "./rust"
+      }
+    }
+  },
+  "routes": {
+    "/api/foo/*": "go",
+    "/api/bar/*": "go",
+    "/api/baz": "rust"
+  }
+}

@@ -1,32 +1,32 @@
-# tinyproxy
+# miniproxy
 
-tinyproxy is a small proxy server written in Go, primarily for use in local development
+miniproxy is a small proxy server written in Go, primarily for use in local development
 where you wish to route requests on a single port to one of a number of other ports.
 
 Routing is done by request path.
 
-tinyproxy will take care of starting your services and restarting them if they crash.
+miniproxy will take care of starting your services and restarting them if they crash.
 
-In future, I would like to include a file watcher as part of tinyproxy, but there don't
+In future, I would like to include a file watcher as part of miniproxy, but there don't
 seem to be any good recursive, cross-platform file-watching libraries available yet,
 and I don't have the inclination to create one. 
 
 ## Installation
 
-To install tinyproxy, run:
+To install miniproxy, run:
 
 ```
-go install github.com/isaacharrisholt/tinyproxy@latest
+go install github.com/isaacharrisholt/miniproxy@latest
 ```
 
-Note: tinyproxy requires Go version 1.21 or later.
+Note: miniproxy requires Go version 1.21 or later.
 
 ## Usage
 
-To start using tinyproxy, simply create a `tinyproxy.json` file in the directory you'd
-like to use tinyproxy from.
+To start using miniproxy, simply create a `miniproxy.json` file in the directory you'd
+like to use miniproxy from.
 
-Here's a full example of a `tinyproxy.json` file:
+Here's a full example of a `miniproxy.json` file:
 
 ```json
 {
@@ -55,11 +55,11 @@ Here's a full example of a `tinyproxy.json` file:
 }
 ```
 
-Once you have a `tinyproxy.json`, simply run `tinyproxy` in the same directory.
-In the future, tinyproxy will look for a `tinyproxy.json` in parent directories,
+Once you have a `miniproxy.json`, simply run `miniproxy` in the same directory.
+In the future, miniproxy will look for a `miniproxy.json` in parent directories,
 but this hasn't been implemented yet.
 
-This will start tinyproxy on port 3000 (which is also the default) and start two other
+This will start miniproxy on port 3000 (which is also the default) and start two other
 services - `go` and `rust` - in their respective directories.
 
 You may use glob pattern matching in `routes`, and it's also worth mentioning that
@@ -76,4 +76,4 @@ issue first - I only have a limited capacity for maintenance.
 
 ## License
 
-tinyproxy is MIT licensed, so do what you like!
+miniproxy is MIT licensed, so do what you like!

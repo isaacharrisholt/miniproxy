@@ -32,7 +32,7 @@ type proxy struct {
 
 func NewProxy(s Settings) (proxy, error) {
 	p := proxy{
-		logger: NewChannelLogger("tinyproxy"),
+		logger: NewChannelLogger("miniproxy"),
 	}
 	for target, spec := range s.Targets {
 		if spec.Port == 0 {

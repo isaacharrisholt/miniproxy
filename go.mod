@@ -1,4 +1,4 @@
-module github.com/isaacharrisholt/tinyproxy
+module github.com/isaacharrisholt/miniproxy
 
 go 1.21.0
 
