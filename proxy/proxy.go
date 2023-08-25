@@ -34,6 +34,11 @@ func NewProxy(s Settings) (proxy, error) {
 	p := proxy{
 		logger: NewChannelLogger("tinyproxy"),
 	}
+	for target, spec := range s.Targets {
+		if spec.Port == 0 {
+			return p, fmt.Errorf("no port provided for target: %s", target)
+		}
+	}
 	for source, target := range s.Routes {
 		if _, ok := s.Targets[target]; !ok {
 			return p, fmt.Errorf("Target not found for route %s: %s", source, target)

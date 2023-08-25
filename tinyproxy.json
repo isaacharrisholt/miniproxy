@@ -1,7 +1,13 @@
 {
   "port": 8000,
   "targets": {
-    "go": {
+    "py1": {
+      "port": 8001,
+      "service": {
+        "command": ["python", "test.py"]
+      }
+    },
+    "py2": {
       "port": 8001,
       "service": {
         "command": ["python", "test.py"]
@@ -9,6 +15,6 @@
     }
   },
   "routes": {
-    "*": "go"
+    "*": "py1"
   }
 }

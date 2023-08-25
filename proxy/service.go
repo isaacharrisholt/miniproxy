@@ -23,12 +23,20 @@ func serviceWorker(service proxyService, logger Logger) error {
 		cmd.Dir = service.WorkDir
 
 		logger.debug("getting stdout pipe")
-		stdOut, err := cmd.StdoutPipe()
+		stdout, err := cmd.StdoutPipe()
 		if err != nil {
 			logger.error(fmt.Sprintf("error getting stdout pipe: %s", err))
 			return err
 		}
 		logger.debug("got stdout pipe")
+
+		logger.debug("getting stderr pipe")
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			logger.error(fmt.Sprintf("error getting stderr pipe: %s", err))
+			return err
+		}
+		logger.debug("got stderr pipe")
 
 		logger.debug("starting service")
 		err = cmd.Start()
@@ -38,11 +46,20 @@ func serviceWorker(service proxyService, logger Logger) error {
 		}
 
 		// Read stdout line by line
-		scanner := bufio.NewScanner(stdOut)
-		scanner.Split(bufio.ScanLines)
-		for scanner.Scan() {
-			logger.info(scanner.Text())
-		}
+		stdoutScanner := bufio.NewScanner(stdout)
+		stdoutScanner.Split(bufio.ScanLines)
+		stderrScanner := bufio.NewScanner(stderr)
+
+		go func() {
+			for stdoutScanner.Scan() {
+				logger.info(stdoutScanner.Text())
+			}
+		}()
+		go func() {
+			for stderrScanner.Scan() {
+				logger.error(stderrScanner.Text())
+			}
+		}()
 
 		err = cmd.Wait()
 		if err != nil {
