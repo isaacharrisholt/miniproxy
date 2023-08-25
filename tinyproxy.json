@@ -1,0 +1,14 @@
+{
+  "port": 8000,
+  "targets": {
+    "go": {
+      "port": 8001,
+      "service": {
+        "command": ["python", "test.py"]
+      }
+    }
+  },
+  "routes": {
+    "*": "go"
+  }
+}
