@@ -3,7 +3,6 @@ package proxy
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os/exec"
 )
 
@@ -16,58 +15,43 @@ type proxyService struct {
 	WorkDir string   `json:"workDir"`
 }
 
-type logLine struct {
-	line        string
-	serviceName string
-}
-
-func (l logLine) String() string {
-	return fmt.Sprintf("[%s] %s", l.serviceName, l.line)
-}
-
-func stdOutReceiver() {
+func serviceWorker(service proxyService, logger Logger) error {
+	// Repeatedly start the service when it ends (babysitting)
 	for {
-		select {
-		case line := <-stdOutChan:
-			log.Println(line)
+		// Start the service
+		cmd := exec.Command(service.Command[0], service.Command[1:]...)
+		cmd.Dir = service.WorkDir
+
+		logger.debug("getting stdout pipe")
+		stdOut, err := cmd.StdoutPipe()
+		if err != nil {
+			logger.error(fmt.Sprintf("error getting stdout pipe: %s", err))
+			return err
 		}
-	}
-}
+		logger.debug("got stdout pipe")
 
-func serviceWorker(service proxyService, serviceName string) error {
-	// Start the service
-	cmd := exec.Command(service.Command[0], service.Command[1:]...)
-	cmd.Dir = service.WorkDir
+		logger.debug("starting service")
+		err = cmd.Start()
+		if err != nil {
+			logger.error(fmt.Sprintf("error starting service: %s", err))
+			return err
+		}
 
-	log.Println("getting stdout pipe for", serviceName)
-	stdOut, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Printf("error getting stdout pipe for service %s: %s", serviceName, err)
-		return err
-	}
-	log.Printf("got stdout pipe for %s", serviceName)
-	stdOutChan <- logLine{fmt.Sprintf("starting service %s", serviceName), serviceName}
-	log.Printf("starting service %s", serviceName)
-	err = cmd.Start()
-	if err != nil {
-		log.Printf("error starting service %s: %s", serviceName, err)
-		return err
-	}
-
-	for {
 		// Read stdout line by line
 		scanner := bufio.NewScanner(stdOut)
 		scanner.Split(bufio.ScanLines)
 		for scanner.Scan() {
-			stdOutChan <- logLine{scanner.Text(), serviceName}
+			logger.info(scanner.Text())
+		}
+
+		err = cmd.Wait()
+		if err != nil {
+			logger.error(fmt.Sprintf("service exited with error: %s", err))
 		}
 	}
-
-	log.Println("started service", serviceName)
-	return cmd.Wait()
 }
 
-func startService(service proxyService, serviceName string) {
-	log.Println("trying to start service", serviceName)
-	go serviceWorker(service, serviceName)
+func startServiceWithChannelLogger(service proxyService, serviceName string) {
+	logger := NewChannelLogger(serviceName)
+	go serviceWorker(service, logger)
 }

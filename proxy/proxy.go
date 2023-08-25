@@ -3,7 +3,6 @@ package proxy
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -28,10 +27,13 @@ type proxy struct {
 	routes  []proxyRoute
 	targets map[string]proxyTarget
 	port    int
+	logger  Logger
 }
 
 func NewProxy(s Settings) (proxy, error) {
-	p := proxy{}
+	p := proxy{
+		logger: NewChannelLogger("tinyproxy"),
+	}
 	for source, target := range s.Routes {
 		if _, ok := s.Targets[target]; !ok {
 			return p, fmt.Errorf("Target not found for route %s: %s", source, target)
@@ -62,25 +64,25 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 		path = "/" + path
 	}
 
-	log.Printf("PROXY: Request: %s %s", r.Method, path)
+	p.logger.info(fmt.Sprintf("request: %s %s", r.Method, path))
 
 	var targetPort int
 	for _, route := range p.routes {
-		log.Printf("PROXY: Checking route: %s", route.source)
+		p.logger.debug(fmt.Sprintf("checking route: %s", route.source))
 		if route.sourceGlob.Match(path) {
 			target, ok := p.targets[route.target]
 			if !ok {
-				log.Printf("PROXY: No target found for: %s", route.target)
+				p.logger.error(fmt.Sprintf("no target found for: %s", route.target))
 				respond(w, "Not found", http.StatusNotFound)
 				return
 			}
-			log.Printf("PROXY: Route found: %s -> %d", route.source, target.Port)
+			p.logger.debug(fmt.Sprintf("route found: %s -> %d", route.source, target.Port))
 			targetPort = target.Port
 			break
 		}
 	}
 	if targetPort == 0 {
-		log.Printf("PROXY: No route found for: %s", path)
+		p.logger.error(fmt.Sprintf("no target found for: %s", path))
 		respond(w, "Not found", http.StatusNotFound)
 		return
 	}
@@ -94,14 +96,14 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	targetReq, err := http.NewRequest(r.Method, targetUrl, r.Body)
 	if err != nil {
-		log.Printf("PROXY: Error creating request: %s", err)
+		p.logger.error(fmt.Sprintf("error creating request: %s", err))
 		respond(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 	copyHeaders(targetReq.Header, r.Header)
 	targetRes, err := http.DefaultClient.Do(targetReq)
 	if err != nil {
-		log.Printf("PROXY: Error sending request: %s", err)
+		p.logger.error(fmt.Sprintf("error sending request: %s", err))
 		respond(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -114,7 +116,7 @@ func (p proxy) startServices() error {
 	go stdOutReceiver()
 	for targetName, target := range p.targets {
 		if target.Service.Command != nil {
-			startService(target.Service, targetName)
+			startServiceWithChannelLogger(target.Service, targetName)
 		}
 	}
 	return nil
@@ -126,7 +128,7 @@ func (p proxy) Start() error {
 		return err
 	}
 	http.HandleFunc("/", p.handler)
-	log.Printf("PROXY: Listening on port %d", p.port)
+	p.logger.info(fmt.Sprintf("listening on port %d", p.port))
 	return http.ListenAndServe(fmt.Sprintf(":%d", p.port), nil)
 }
 
