@@ -24,10 +24,11 @@ type proxyRoute struct {
 }
 
 type proxy struct {
-	routes  []proxyRoute
-	targets map[string]proxyTarget
-	port    int
-	logger  Logger
+	routes        []proxyRoute
+	targets       map[string]proxyTarget
+	defaultTarget string
+	port          int
+	logger        Logger
 }
 
 func NewProxy(s Settings) (proxy, error) {
@@ -55,6 +56,7 @@ func NewProxy(s Settings) (proxy, error) {
 		p.routes = append(p.routes, route)
 	}
 	p.targets = s.Targets
+	p.defaultTarget = s.Default
 	if s.Port == 0 {
 		p.port = proxyDefaultPort
 	} else {
@@ -77,9 +79,24 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 		if route.sourceGlob.Match(path) {
 			target, ok := p.targets[route.target]
 			if !ok {
-				p.logger.error(fmt.Sprintf("no target found for: %s", route.target))
-				respond(w, "Not found", http.StatusNotFound)
-				return
+				if p.defaultTarget == "" {
+					p.logger.error(fmt.Sprintf("no target found for: %s", route.target))
+					respond(w, "Not found", http.StatusNotFound)
+					return
+				}
+				p.logger.debug(
+					fmt.Sprintf(
+						"no target found for: %s, using default: %s",
+						route.target,
+						p.defaultTarget,
+					),
+				)
+				target, ok = p.targets[p.defaultTarget]
+				if !ok {
+					p.logger.error(fmt.Sprintf("no default target found: %s", p.defaultTarget))
+					respond(w, "Not found", http.StatusNotFound)
+					return
+				}
 			}
 			p.logger.debug(fmt.Sprintf("route found: %s -> %d", route.source, target.Port))
 			targetPort = target.Port
@@ -114,7 +131,12 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	copyHeaders(w.Header(), targetRes.Header)
 	w.WriteHeader(targetRes.StatusCode)
-	io.Copy(w, targetRes.Body)
+	_, err = io.Copy(w, targetRes.Body)
+	if err != nil {
+		p.logger.error(fmt.Sprintf("error copying response: %s", err))
+		respond(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (p proxy) startServices() error {
