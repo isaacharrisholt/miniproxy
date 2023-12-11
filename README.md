@@ -47,6 +47,7 @@ Here's a full example of a `miniproxy.json` file:
       }
     }
   },
+  "default": "go",
   "routes": {
     "/api/foo/*": "go",
     "/api/bar/*": "go",
@@ -65,6 +66,10 @@ services - `go` and `rust` - in their respective directories.
 You may use glob pattern matching in `routes`, and it's also worth mentioning that
 `targets.<target>.service` is optional, as is `targets.<target>.service.workDir`.
 The latter will default to the current directory.
+
+If the `default` key is specified, any request that does not match a route in `routes`
+will be routed to the default service. This is equivalent to having `"*"` as your
+last route.
 
 You may also specify the log level (`debug`, `info`, `error`) with the `LOG_LEVEL`
 environment variable.
