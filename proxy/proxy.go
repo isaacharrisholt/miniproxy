@@ -72,6 +72,7 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	p.logger.info(fmt.Sprintf("request: %s %s", r.Method, path))
+	p.logger.debug(fmt.Sprintf("p.defaultTarget: %v", p.defaultTarget))
 
 	var targetPort int
 	for _, route := range p.routes {
@@ -79,24 +80,9 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 		if route.sourceGlob.Match(path) {
 			target, ok := p.targets[route.target]
 			if !ok {
-				if p.defaultTarget == "" {
-					p.logger.error(fmt.Sprintf("no target found for: %s", route.target))
-					respond(w, "Not found", http.StatusNotFound)
-					return
-				}
-				p.logger.debug(
-					fmt.Sprintf(
-						"no target found for: %s, using default: %s",
-						route.target,
-						p.defaultTarget,
-					),
-				)
-				target, ok = p.targets[p.defaultTarget]
-				if !ok {
-					p.logger.error(fmt.Sprintf("no default target found: %s", p.defaultTarget))
-					respond(w, "Not found", http.StatusNotFound)
-					return
-				}
+				p.logger.error(fmt.Sprintf("no target found for: %s", route.target))
+				respond(w, "Not found", http.StatusNotFound)
+				return
 			}
 			p.logger.debug(fmt.Sprintf("route found: %s -> %d", route.source, target.Port))
 			targetPort = target.Port
@@ -104,9 +90,19 @@ func (p proxy) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if targetPort == 0 {
-		p.logger.error(fmt.Sprintf("no target found for: %s", path))
-		respond(w, "Not found", http.StatusNotFound)
-		return
+		if p.defaultTarget == "" {
+			p.logger.error(fmt.Sprintf("no target found for: %s", path))
+			respond(w, "Not found", http.StatusNotFound)
+			return
+		}
+		target, ok := p.targets[p.defaultTarget]
+		if !ok {
+			p.logger.error(fmt.Sprintf("no target found for: %s", p.defaultTarget))
+			respond(w, "Not found", http.StatusNotFound)
+			return
+		}
+		p.logger.debug(fmt.Sprintf("default target found: %s -> %d", p.defaultTarget, target.Port))
+		targetPort = target.Port
 	}
 	targetUrl := fmt.Sprintf(
 		"http://localhost:%d%s",
