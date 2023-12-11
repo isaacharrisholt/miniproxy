@@ -21,6 +21,7 @@ type Settings struct {
 	Routes  map[string]string      `json:"routes"`
 	Targets map[string]proxyTarget `json:"targets"`
 	Port    int                    `json:"port"`
+	Default string                 `json:"default"`
 }
 
 func NewSettings(path string) (Settings, error) {
@@ -61,6 +62,12 @@ func (s *Settings) load(path string) error {
 
 	if len(s.Targets) == 0 {
 		return fmt.Errorf("No targets found in settings file")
+	}
+
+	if s.Default != "" {
+		if _, ok := s.Targets[s.Default]; !ok {
+			return fmt.Errorf("Default target not found in settings file")
+		}
 	}
 
 	return nil
